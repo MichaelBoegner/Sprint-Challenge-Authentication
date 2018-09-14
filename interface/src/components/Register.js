@@ -21,13 +21,6 @@ export default function Register(props){
                         onChange={props.inputHandler}
                         name="password"
                         placeholder="password"></input>
-                    <input 
-                        type="text"
-                        className="form-input"
-                        value={props.department}
-                        onChange={props.inputHandler}
-                        name="department"
-                        placeholder="department"></input> 
                     <button
                         className="form-button">Submit</button>            
                 </form>
