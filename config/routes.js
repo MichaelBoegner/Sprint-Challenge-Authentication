@@ -1,6 +1,9 @@
 const axios = require('axios');
-
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { authenticate } = require('./middlewares');
+const db = require('../database/dbConfig');
+const jwtKey = require('../_secrets/keys').jwtKey;
 
 module.exports = server => {
   server.post('/api/register', register);
@@ -8,12 +11,57 @@ module.exports = server => {
   server.get('/api/jokes', authenticate, getJokes);
 };
 
+const secret = jwtKey;
+function generateToken(user) {
+    const payload = {
+        username: user.username
+    };
+    const options = {
+        expiresIn: '1h',
+        jwtid: '123456',
+    };
+    return jwt.sign(payload, secret, options); 
+}
+
 function register(req, res) {
-  // implement user registration
+  const credentials = req.body; 
+  const hash = bcrypt.hashSync(credentials.password, 10);
+  credentials.password = hash; 
+  
+  db('users')
+      .insert(credentials)
+      .then(ids => {
+          const id = ids[0];
+      
+          db('users')
+              .where({id})
+              .first()
+              .then(user => {
+                  const token = generateToken(user); 
+                  res.status(201).json({id: user.id, token});
+              }) 
+              .catch(err => {
+                  res.status(500).json({error: "Could not register the given user."})
+              })
+      })
 }
 
 function login(req, res) {
-  // implement user login
+  const credentials = req.body; 
+
+  db('users')
+  .where({username: credentials.username})
+  .first()
+  .then(user => {
+      if(user && bcrypt.compareSync(credentials.password, user.password)) {
+          const token = generateToken(user); 
+          res.status(201).json({token});
+      } else {
+          res.status(401).json({error: "Authorization not granted!"})}
+      }) 
+  .catch(err => {
+      res.status(500).json({error: "Could not login with the given information."});
+  })
 }
 
 function getJokes(req, res) {
